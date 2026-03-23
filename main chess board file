@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Root Lyfe Chess</title>
+<title>Root Lyfe Chess — PRO</title>
 <style>
 html, body { margin:0; padding:0; height:100%; display:flex; justify-content:center; align-items:center; background:#0b0f1a; }
 #chessBoard { display:grid; grid-template-columns: repeat(8, 60px); grid-template-rows: repeat(8, 60px); border:4px solid #222; }
@@ -10,27 +10,153 @@ html, body { margin:0; padding:0; height:100%; display:flex; justify-content:cen
 .white { background:#f0d9b5; }
 .black { background:#b58863; }
 .selected { outline:3px solid #22c55e; }
+.legal { outline:3px solid #facc15; }
 </style>
 </head>
 <body>
 <div id="chessBoard"></div>
+
 <script>
-// JS from Root Lyfe Chess build: board array, Unicode pieces, click-to-move, highlight
+// ------------------ GAME STATE ------------------
+const boardEl = document.getElementById('chessBoard');
+let board = [];
+let selected = null;
+let turn = 'w'; // w=white, b=black
+
+// Unicode pieces
+const pieces = {
+  'r':'♜','n':'♞','b':'♝','q':'♛','k':'♚','p':'♟',
+  'R':'♖','N':'♘','B':'♗','Q':'♕','K':'♔','P':'♙'
+};
+
+// Initial setup
+const initial = [
+  ['r','n','b','q','k','b','n','r'],
+  ['p','p','p','p','p','p','p','p'],
+  ['','','','','','','',''],
+  ['','','','','','','',''],
+  ['','','','','','','',''],
+  ['','','','','','','',''],
+  ['P','P','P','P','P','P','P','P'],
+  ['R','N','B','Q','K','B','N','R'],
+];
+
+// ------------------ CREATE BOARD ------------------
+function createBoard(){
+  boardEl.innerHTML = '';
+  for(let i=0;i<8;i++){
+    board[i] = [];
+    for(let j=0;j<8;j++){
+      board[i][j] = initial[i][j];
+      const square = document.createElement('div');
+      square.className = 'square ' + ((i+j)%2===0?'white':'black');
+      square.dataset.row = i;
+      square.dataset.col = j;
+      if(initial[i][j]) square.textContent = pieces[initial[i][j]];
+      square.addEventListener('click', onClick);
+      boardEl.appendChild(square);
+    }
+  }
+}
+createBoard();
+
+// ------------------ MOVE LOGIC ------------------
+function onClick(e){
+  const row = parseInt(e.currentTarget.dataset.row);
+  const col = parseInt(e.currentTarget.dataset.col);
+  const piece = board[row][col];
+  const color = piece && piece === piece.toUpperCase() ? 'w' : 'b';
+
+  if(selected){
+    const [sRow,sCol] = selected;
+    if(isLegalMove(sRow,sCol,row,col)){
+      movePiece(sRow,sCol,row,col);
+      turn = turn === 'w' ? 'b' : 'w';
+      selected = null;
+      updateBoard();
+    } else if(piece && getColor(piece)===turn){
+      selected = [row,col];
+    } else {
+      selected = null;
+    }
+  } else if(piece && getColor(piece)===turn){
+    selected = [row,col];
+  }
+  highlight();
+}
+
+// ------------------ HELPER FUNCTIONS ------------------
+function getColor(piece){ return piece && piece === piece.toUpperCase() ? 'w':'b'; }
+
+function updateBoard(){
+  boardEl.childNodes.forEach((sq,i)=>{
+    const r = Math.floor(i/8), c = i%8;
+    sq.textContent = pieces[board[r][c]] || '';
+    sq.classList.remove('selected','legal');
+  });
+}
+
+function highlight(){
+  boardEl.childNodes.forEach(sq=>sq.classList.remove('selected','legal'));
+  if(selected){
+    const [r,c] = selected;
+    const index = r*8 + c;
+    boardEl.childNodes[index].classList.add('selected');
+    getLegalMoves(r,c).forEach(([row,col])=>{
+      const i = row*8+col;
+      boardEl.childNodes[i].classList.add('legal');
+    });
+  }
+}
+
+// ------------------ PIECE LOGIC ------------------
+function isLegalMove(sRow,sCol,dRow,dCol){
+  return getLegalMoves(sRow,sCol).some(([r,c])=>r===dRow && c===dCol);
+}
+
+function getLegalMoves(r,c){
+  const moves=[];
+  const piece = board[r][c];
+  if(!piece) return moves;
+  const color = getColor(piece);
+  const enemy = color==='w'?'b':'w';
+
+  const directions = {
+    'P':[[ -1,0],[-1,-1],[-1,1]], 'p':[[1,0],[1,-1],[1,1]],
+    'N':[[ -2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]],
+    'B':[[ -1,-1],[-1,1],[1,-1],[1,1]],
+    'R':[[ -1,0],[1,0],[0,-1],[0,1]],
+    'Q':[[ -1,-1],[-1,1],[1,-1],[1,1],[ -1,0],[1,0],[0,-1],[0,1]],
+    'K':[[ -1,-1],[-1,1],[1,-1],[1,1],[ -1,0],[1,0],[0,-1],[0,1]]
+  };
+
+  const type = piece.toUpperCase();
+  const dirs = directions[type] || [];
+  
+  dirs.forEach(([dr,dc])=>{
+    let nr=r+dr, nc=c+dc;
+    while(nr>=0 && nr<8 && nc>=0 && nc<8){
+      const target=board[nr][nc];
+      if(type==='P'){ // pawn logic
+        if(dc===0 && !target) moves.push([nr,nc]);
+        else if(dc!==0 && target && getColor(target)!==color) moves.push([nr,nc]);
+        break;
+      } else {
+        if(!target) moves.push([nr,nc]);
+        else { if(getColor(target)!==color) moves.push([nr,nc]); break; }
+      }
+      if(['N','K'].includes(type)) break; // one-step moves
+      nr+=dr; nc+=dc;
+    }
+  });
+  return moves;
+}
+
+// ------------------ MOVE PIECE ------------------
+function movePiece(sRow,sCol,dRow,dCol){
+  board[dRow][dCol]=board[sRow][sCol];
+  board[sRow][sCol]='';
+}
 </script>
 </body>
 </html>
-
-# Root Lyfe Chess
-
-Interactive chess board with:
-
-- Standard 8x8 board
-- Unicode pieces
-- Click-to-select and move pieces
-- Mobile-friendly
-- Highlight for selected piece
-
-**How to play:**  
-Click/tap a piece, then click/tap a destination square. Currently allows basic moves; future upgrades can include legal move enforcement, turn tracking, and AI.
-
-**License:** MIT
