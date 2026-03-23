@@ -2,22 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Root Lyfe Chess — PRO</title>
+<title>Root Lyfe Chess — FULLSCREEN</title>
 <style>
 html, body {
-  margin:0; padding:0; height:100%; display:flex; justify-content:center; align-items:center; background:#0b0f1a;
+  margin:0; padding:0; width:100%; height:100%;
+  background:#0b0f1a; display:flex; justify-content:center; align-items:center;
+  overflow:hidden; font-family:Arial, sans-serif;
 }
 #chessBoard {
   display:grid;
-  grid-template-columns: repeat(8, 60px);
-  grid-template-rows: repeat(8, 60px);
-  border:4px solid #222;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  width:90vmin;
+  height:90vmin;
 }
 .square {
-  width:60px; height:60px;
   display:flex; justify-content:center; align-items:center;
-  font-size:36px; cursor:pointer;
-  user-select:none;
+  font-size:6vmin; cursor:pointer; user-select:none;
 }
 .white { background:#f0d9b5; }
 .black { background:#b58863; }
@@ -27,7 +28,6 @@ html, body {
 </head>
 <body>
 <div id="chessBoard"></div>
-
 <script>
 // ------------------ GAME STATE ------------------
 const boardEl = document.getElementById('chessBoard');
@@ -74,7 +74,6 @@ createBoard();
 
 // ------------------ HELPER FUNCTIONS ------------------
 function getColor(piece){ return piece && piece === piece.toUpperCase() ? 'w':'b'; }
-
 function updateBoard(){
   boardEl.childNodes.forEach((sq,i)=>{
     const r = Math.floor(i/8), c = i%8;
@@ -82,14 +81,15 @@ function updateBoard(){
     sq.classList.remove('selected','legal');
   });
 }
-
 function highlight(){
   boardEl.childNodes.forEach(sq=>sq.classList.remove('selected','legal'));
   if(selected){
     const [r,c] = selected;
-    boardEl.childNodes[r*8+c].classList.add('selected');
+    const index = r*8+c;
+    boardEl.childNodes[index].classList.add('selected');
     getLegalMoves(r,c).forEach(([row,col])=>{
-      boardEl.childNodes[row*8+col].classList.add('legal');
+      const i = row*8+col;
+      boardEl.childNodes[i].classList.add('legal');
     });
   }
 }
@@ -99,21 +99,22 @@ function onClick(e){
   const row = parseInt(e.currentTarget.dataset.row);
   const col = parseInt(e.currentTarget.dataset.col);
   const piece = board[row][col];
+  const color = piece ? getColor(piece) : null;
 
   if(selected){
     const [sRow,sCol] = selected;
     if(isLegalMove(sRow,sCol,row,col)){
       movePiece(sRow,sCol,row,col);
-      turn = turn === 'w' ? 'b' : 'w';
-      selected = null;
+      turn = turn==='w'?'b':'w';
+      selected=null;
       updateBoard();
-    } else if(piece && getColor(piece)===turn){
-      selected = [row,col];
+    } else if(piece && color===turn){
+      selected=[row,col];
     } else {
-      selected = null;
+      selected=null;
     }
-  } else if(piece && getColor(piece)===turn){
-    selected = [row,col];
+  } else if(piece && color===turn){
+    selected=[row,col];
   }
   highlight();
 }
@@ -122,16 +123,16 @@ function onClick(e){
 function isLegalMove(sRow,sCol,dRow,dCol){
   return getLegalMoves(sRow,sCol).some(([r,c])=>r===dRow && c===dCol);
 }
-
 function getLegalMoves(r,c){
   const moves=[];
-  const piece = board[r][c];
-  if(!piece) return moves;
-  const color = getColor(piece);
+  const piece=board[r][c]; if(!piece) return moves;
+  const color=getColor(piece);
+  const enemy=color==='w'?'b':'w';
+  const type=piece.toUpperCase();
 
   const directions = {
     'P':[[ -1,0],[-1,-1],[-1,1]],
-    'p':[[1,0],[1,-1],[1,1]],
+    'p':[[ 1,0],[1,-1],[1,1]],
     'N':[[ -2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]],
     'B':[[ -1,-1],[-1,1],[1,-1],[1,1]],
     'R':[[ -1,0],[1,0],[0,-1],[0,1]],
@@ -139,14 +140,12 @@ function getLegalMoves(r,c){
     'K':[[ -1,-1],[-1,1],[1,-1],[1,1],[ -1,0],[1,0],[0,-1],[0,1]]
   };
 
-  const type = piece.toUpperCase();
-  const dirs = directions[type] || [];
-  
+  const dirs=directions[type]||[];
   dirs.forEach(([dr,dc])=>{
     let nr=r+dr, nc=c+dc;
     while(nr>=0 && nr<8 && nc>=0 && nc<8){
       const target=board[nr][nc];
-      if(type==='P'){ // pawn moves
+      if(type==='P'){ // pawn logic
         if(dc===0 && !target) moves.push([nr,nc]);
         else if(dc!==0 && target && getColor(target)!==color) moves.push([nr,nc]);
         break;
@@ -154,7 +153,7 @@ function getLegalMoves(r,c){
         if(!target) moves.push([nr,nc]);
         else { if(getColor(target)!==color) moves.push([nr,nc]); break; }
       }
-      if(['N','K'].includes(type)) break; // one-step moves
+      if(['N','K'].includes(type)) break;
       nr+=dr; nc+=dc;
     }
   });
@@ -163,8 +162,9 @@ function getLegalMoves(r,c){
 
 // ------------------ MOVE PIECE ------------------
 function movePiece(sRow,sCol,dRow,dCol){
-  board[dRow][dCol] = board[sRow][sCol];
-  board[sRow][sCol] = '';
+  board[dRow][dCol]=board[sRow][sCol];
+  board[sRow][sCol]='';
+  updateBoard();
 }
 </script>
 </body>
