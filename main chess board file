@@ -4,9 +4,21 @@
 <meta charset="UTF-8">
 <title>Root Lyfe Chess — PRO</title>
 <style>
-html, body { margin:0; padding:0; height:100%; display:flex; justify-content:center; align-items:center; background:#0b0f1a; }
-#chessBoard { display:grid; grid-template-columns: repeat(8, 60px); grid-template-rows: repeat(8, 60px); border:4px solid #222; }
-.square { width:60px; height:60px; display:flex; justify-content:center; align-items:center; font-size:36px; cursor:pointer; }
+html, body {
+  margin:0; padding:0; height:100%; display:flex; justify-content:center; align-items:center; background:#0b0f1a;
+}
+#chessBoard {
+  display:grid;
+  grid-template-columns: repeat(8, 60px);
+  grid-template-rows: repeat(8, 60px);
+  border:4px solid #222;
+}
+.square {
+  width:60px; height:60px;
+  display:flex; justify-content:center; align-items:center;
+  font-size:36px; cursor:pointer;
+  user-select:none;
+}
 .white { background:#f0d9b5; }
 .black { background:#b58863; }
 .selected { outline:3px solid #22c55e; }
@@ -21,7 +33,7 @@ html, body { margin:0; padding:0; height:100%; display:flex; justify-content:cen
 const boardEl = document.getElementById('chessBoard');
 let board = [];
 let selected = null;
-let turn = 'w'; // w=white, b=black
+let turn = 'w'; // white = w, black = b
 
 // Unicode pieces
 const pieces = {
@@ -29,7 +41,7 @@ const pieces = {
   'R':'♖','N':'♘','B':'♗','Q':'♕','K':'♔','P':'♙'
 };
 
-// Initial setup
+// Initial board setup
 const initial = [
   ['r','n','b','q','k','b','n','r'],
   ['p','p','p','p','p','p','p','p'],
@@ -60,12 +72,33 @@ function createBoard(){
 }
 createBoard();
 
+// ------------------ HELPER FUNCTIONS ------------------
+function getColor(piece){ return piece && piece === piece.toUpperCase() ? 'w':'b'; }
+
+function updateBoard(){
+  boardEl.childNodes.forEach((sq,i)=>{
+    const r = Math.floor(i/8), c = i%8;
+    sq.textContent = pieces[board[r][c]] || '';
+    sq.classList.remove('selected','legal');
+  });
+}
+
+function highlight(){
+  boardEl.childNodes.forEach(sq=>sq.classList.remove('selected','legal'));
+  if(selected){
+    const [r,c] = selected;
+    boardEl.childNodes[r*8+c].classList.add('selected');
+    getLegalMoves(r,c).forEach(([row,col])=>{
+      boardEl.childNodes[row*8+col].classList.add('legal');
+    });
+  }
+}
+
 // ------------------ MOVE LOGIC ------------------
 function onClick(e){
   const row = parseInt(e.currentTarget.dataset.row);
   const col = parseInt(e.currentTarget.dataset.col);
   const piece = board[row][col];
-  const color = piece && piece === piece.toUpperCase() ? 'w' : 'b';
 
   if(selected){
     const [sRow,sCol] = selected;
@@ -85,30 +118,6 @@ function onClick(e){
   highlight();
 }
 
-// ------------------ HELPER FUNCTIONS ------------------
-function getColor(piece){ return piece && piece === piece.toUpperCase() ? 'w':'b'; }
-
-function updateBoard(){
-  boardEl.childNodes.forEach((sq,i)=>{
-    const r = Math.floor(i/8), c = i%8;
-    sq.textContent = pieces[board[r][c]] || '';
-    sq.classList.remove('selected','legal');
-  });
-}
-
-function highlight(){
-  boardEl.childNodes.forEach(sq=>sq.classList.remove('selected','legal'));
-  if(selected){
-    const [r,c] = selected;
-    const index = r*8 + c;
-    boardEl.childNodes[index].classList.add('selected');
-    getLegalMoves(r,c).forEach(([row,col])=>{
-      const i = row*8+col;
-      boardEl.childNodes[i].classList.add('legal');
-    });
-  }
-}
-
 // ------------------ PIECE LOGIC ------------------
 function isLegalMove(sRow,sCol,dRow,dCol){
   return getLegalMoves(sRow,sCol).some(([r,c])=>r===dRow && c===dCol);
@@ -119,10 +128,10 @@ function getLegalMoves(r,c){
   const piece = board[r][c];
   if(!piece) return moves;
   const color = getColor(piece);
-  const enemy = color==='w'?'b':'w';
 
   const directions = {
-    'P':[[ -1,0],[-1,-1],[-1,1]], 'p':[[1,0],[1,-1],[1,1]],
+    'P':[[ -1,0],[-1,-1],[-1,1]],
+    'p':[[1,0],[1,-1],[1,1]],
     'N':[[ -2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]],
     'B':[[ -1,-1],[-1,1],[1,-1],[1,1]],
     'R':[[ -1,0],[1,0],[0,-1],[0,1]],
@@ -137,7 +146,7 @@ function getLegalMoves(r,c){
     let nr=r+dr, nc=c+dc;
     while(nr>=0 && nr<8 && nc>=0 && nc<8){
       const target=board[nr][nc];
-      if(type==='P'){ // pawn logic
+      if(type==='P'){ // pawn moves
         if(dc===0 && !target) moves.push([nr,nc]);
         else if(dc!==0 && target && getColor(target)!==color) moves.push([nr,nc]);
         break;
@@ -154,8 +163,8 @@ function getLegalMoves(r,c){
 
 // ------------------ MOVE PIECE ------------------
 function movePiece(sRow,sCol,dRow,dCol){
-  board[dRow][dCol]=board[sRow][sCol];
-  board[sRow][sCol]='';
+  board[dRow][dCol] = board[sRow][sCol];
+  board[sRow][sCol] = '';
 }
 </script>
 </body>
