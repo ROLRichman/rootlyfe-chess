@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Root Lyfe Chess — 2 Player Fix</title>
+<title>Root Lyfe Chess — 2 Player Fixed</title>
 <style>
 html, body { margin:0; padding:0; width:100%; height:100%; background:#0b0f1a; display:flex; justify-content:center; align-items:center; overflow:hidden; font-family:Arial,sans-serif; }
 #chessBoard { display:grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); width:95vmin; height:95vmin; }
@@ -18,17 +18,15 @@ html, body { margin:0; padding:0; width:100%; height:100%; background:#0b0f1a; d
 <div id="turnIndicator">White's Turn</div>
 <div id="chessBoard"></div>
 <script>
-// GAME STATE
+// ---------------- GAME STATE ----------------
 const boardEl=document.getElementById('chessBoard');
 const turnEl=document.getElementById('turnIndicator');
 let board=[];
 let selected=null;
-let turn='w';
+let turn='w'; // white = w, black = b
 
-// Unicode pieces
 const pieces={'r':'♜','n':'♞','b':'♝','q':'♛','k':'♚','p':'♟','R':'♖','N':'♘','B':'♗','Q':'♕','K':'♔','P':'♙'};
 
-// Initial setup
 const initial=[
 ['r','n','b','q','k','b','n','r'],
 ['p','p','p','p','p','p','p','p'],
@@ -40,7 +38,7 @@ const initial=[
 ['R','N','B','Q','K','B','N','R'],
 ];
 
-// CREATE BOARD
+// ---------------- CREATE BOARD ----------------
 function createBoard(){
   boardEl.innerHTML='';
   for(let i=0;i<8;i++){
@@ -59,18 +57,21 @@ function createBoard(){
   updateTurnIndicator();
 }
 
-// HELPERS
-function getColor(piece){ return piece?piece===piece.toUpperCase()?'w':'b':null; }
+// ---------------- HELPERS ----------------
+function getColor(piece){ return piece && piece===piece.toUpperCase() ? 'w':'b'; }
 function updateBoard(){ boardEl.childNodes.forEach((sq,i)=>{ const r=Math.floor(i/8), c=i%8; sq.textContent=pieces[board[r][c]]||''; sq.classList.remove('selected','legal'); }); }
 function highlight(){ boardEl.childNodes.forEach(sq=>sq.classList.remove('selected','legal')); if(selected){ const [r,c]=selected; const index=r*8+c; boardEl.childNodes[index].classList.add('selected'); getLegalMoves(r,c).forEach(([row,col])=>{ const i=row*8+col; boardEl.childNodes[i].classList.add('legal'); }); } }
 function updateTurnIndicator(){ turnEl.textContent=turn==='w'?"White's Turn":"Black's Turn"; }
 
-// MOVE LOGIC
+// ---------------- MOVE LOGIC ----------------
 function onClick(e){
   const row=parseInt(e.currentTarget.dataset.row);
   const col=parseInt(e.currentTarget.dataset.col);
   const piece=board[row][col];
   const color=piece?getColor(piece):null;
+
+  // Only allow selection if it's this player's turn
+  if(piece && color!==turn && !selected) return;
 
   if(selected){
     const [sRow,sCol]=selected;
@@ -91,10 +92,10 @@ function onClick(e){
   highlight();
 }
 
-// PIECE LOGIC
+// ---------------- PIECE LOGIC ----------------
 function isLegalMove(sRow,sCol,dRow,dCol){ return getLegalMoves(sRow,sCol).some(([r,c])=>r===dRow && c===dCol); }
 function getLegalMoves(r,c){
-  const moves=[]; const piece=board[r][c]; if(!piece) return moves; const color=getColor(piece); const enemy=color==='w'?'b':'w'; const type=piece.toUpperCase();
+  const moves=[]; const piece=board[r][c]; if(!piece) return moves; const color=getColor(piece); const type=piece.toUpperCase();
   const dirs={
     'P':[[-1,0],[-1,-1],[-1,1]],
     'p':[[1,0],[1,-1],[1,1]],
@@ -104,12 +105,13 @@ function getLegalMoves(r,c){
     'Q':[[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]],
     'K':[[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]]
   };
+
   const delta=dirs[type]||[];
   delta.forEach(([dr,dc])=>{
     let nr=r+dr,nc=c+dc;
     while(nr>=0 && nr<8 && nc>=0 && nc<8){
       const target=board[nr][nc];
-      if(type==='P'){ // pawn
+      if(type==='P'){ // pawn logic
         if(dc===0 && !target && ((color==='w' && dr<0)||(color==='b'&&dr>0))) moves.push([nr,nc]);
         else if(dc!==0 && target && getColor(target)!==color) moves.push([nr,nc]);
         break;
@@ -124,10 +126,10 @@ function getLegalMoves(r,c){
   return moves;
 }
 
-// MOVE PIECE
+// ---------------- MOVE PIECE ----------------
 function movePiece(sRow,sCol,dRow,dCol){ board[dRow][dCol]=board[sRow][sCol]; board[sRow][sCol]=''; updateBoard(); }
 
-// INIT
+// ---------------- INIT ----------------
 createBoard();
 </script>
 </body>
